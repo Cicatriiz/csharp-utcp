@@ -1,0 +1,41 @@
+# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+
+# dependencies
+/packages/
+/node_modules/
+
+# toolsets
+/tools/
+
+# project files
+/project.lock.json
+/project.fragment.lock.json
+/packages.config
+
+# local user files
+*.user
+*.userosscache
+*.sln.docstates
+
+# Visual Studio 2015 cache/options directory
+.vs/
+
+# Visual Studio 2017 cache/options directory
+.vs/
+
+# Rider - https://www.jetbrains.com/help/rider/Sharing_Configuration_Options.html
+.idea/
+*.sln.iml
+
+# Mac
+.DS_Store
+
+# Build results
+[Bb]in/
+[Oo]bj/
+
+# Visual Studio Code
+.vscode/
+
+# Rider
+.idea/
