@@ -30,7 +30,11 @@ namespace csharp_utcp
                 else
                 {
                     var str = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                    yield return JsonNode.Parse(str);
+                    var jsonNode = JsonNode.Parse(str);
+                    if (jsonNode != null)
+                    {
+                        yield return jsonNode;
+                    }
                 }
             }
         }

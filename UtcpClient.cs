@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
@@ -11,7 +12,7 @@ namespace csharp_utcp
         private readonly IToolSearchStrategy _toolSearchStrategy;
         private readonly UtcpClientConfig _config;
 
-        public UtcpClient(IToolRepository toolRepository = null, IToolSearchStrategy toolSearchStrategy = null, UtcpClientConfig config = null)
+        public UtcpClient(IToolRepository? toolRepository = null, IToolSearchStrategy? toolSearchStrategy = null, UtcpClientConfig? config = null)
         {
             _toolRepository = toolRepository ?? new InMemToolRepository();
             _toolSearchStrategy = toolSearchStrategy ?? new TagSearch();
@@ -22,6 +23,7 @@ namespace csharp_utcp
         {
             var json = File.ReadAllText(path);
             var manual = JsonSerializer.Deserialize<UTCPManual>(json);
+            if (manual == null) throw new JsonException("Failed to deserialize UTCP manual.");
             var provider = new Provider
             {
                 Name = "default",
@@ -41,9 +43,12 @@ namespace csharp_utcp
         public void LoadOpenApi(string openApiSpec)
         {
             var manual = OpenApiConverter.Convert(openApiSpec);
-            foreach (var tool in manual.Tools)
+            if (manual.Tools != null)
             {
-                _toolRepository.AddTool(tool);
+                foreach (var tool in manual.Tools)
+                {
+                    _toolRepository.AddTool(tool);
+                }
             }
         }
 
@@ -58,6 +63,11 @@ namespace csharp_utcp
             if (tool == null)
             {
                 throw new KeyNotFoundException($"Tool '{toolName}' not found.");
+            }
+
+            if (tool.ToolTransport == null)
+            {
+                throw new InvalidOperationException($"Tool '{toolName}' has no transport defined.");
             }
 
             return tool.ToolTransport switch
@@ -81,7 +91,7 @@ namespace csharp_utcp
             var remoteEP = new System.Net.IPEndPoint(System.Net.IPAddress.Any, 0);
             var receivedBytes = client.Receive(ref remoteEP);
             var response = System.Text.Encoding.UTF8.GetString(receivedBytes);
-            return JsonNode.Parse(response);
+            return JsonNode.Parse(response) ?? throw new JsonException("Failed to parse response from UDP execution.");
         }
 
         private JsonNode ExecuteTcp(TcpTransport transport, JsonObject inputs)
@@ -93,7 +103,7 @@ namespace csharp_utcp
             writer.Flush();
             var reader = new StreamReader(stream);
             var response = reader.ReadToEnd();
-            return JsonNode.Parse(response);
+            return JsonNode.Parse(response) ?? throw new JsonException("Failed to parse response from TCP execution.");
         }
 
         private JsonNode ExecuteGrpc(GrpcTransport transport, JsonObject inputs)
@@ -101,13 +111,21 @@ namespace csharp_utcp
             var channel = Grpc.Net.Client.GrpcChannel.ForAddress(transport.Address);
             var assembly = System.Reflection.Assembly.Load("GrpcServer");
             var clientType = assembly.GetType(transport.Service);
+            if (clientType == null) throw new TypeLoadException($"Service type '{transport.Service}' not found in assembly.");
+
             var client = System.Activator.CreateInstance(clientType, channel);
+            if (client == null) throw new InvalidOperationException($"Failed to create instance of service '{transport.Service}'.");
+
             var method = client.GetType().GetMethod(transport.Method);
+            if (method == null) throw new MissingMethodException($"Method '{transport.Method}' not found on service '{transport.Service}'.");
+
             var requestType = method.GetParameters()[0].ParameterType;
             var request = JsonSerializer.Deserialize(inputs.ToString(), requestType);
-            var responseTask = method.Invoke(client, new object[] { request, new Grpc.Core.CallOptions() });
+            var responseTask = method.Invoke(client, new object[] { request!, new Grpc.Core.CallOptions() });
+            if (responseTask == null) throw new InvalidOperationException("gRPC method invocation returned null.");
+
             var response = ((dynamic)responseTask).Result;
-            return JsonSerializer.SerializeToNode(response);
+            return JsonSerializer.SerializeToNode(response)!;
         }
 
         private JsonNode ExecuteGraphQL(GraphQLTransport transport, JsonObject inputs)
@@ -128,7 +146,7 @@ namespace csharp_utcp
             };
 
             var response = client.SendQueryAsync<JsonObject>(request).Result;
-            return response.Data;
+            return response.Data!;
         }
 
         public IAsyncEnumerable<JsonNode> ExecuteStream(string toolName, JsonObject inputs)
@@ -137,6 +155,11 @@ namespace csharp_utcp
             if (tool == null)
             {
                 throw new KeyNotFoundException($"Tool '{toolName}' not found.");
+            }
+
+            if (tool.ToolTransport == null)
+            {
+                throw new NotSupportedException($"Tool '{toolName}' has no transport defined.");
             }
 
             if (tool.ToolTransport is IStreamableTransport streamableTransport)
@@ -152,10 +175,10 @@ namespace csharp_utcp
             var path = transport.Path;
             foreach (var input in inputs)
             {
-                path = path.Replace($"{{{input.Key}}}", input.Value.ToString());
+                path = path.Replace($"{{{input.Key}}}", input.Value?.ToString() ?? string.Empty);
             }
             var content = File.ReadAllText(path);
-            return JsonNode.Parse(content);
+            return JsonNode.Parse(content) ?? throw new JsonException("Failed to parse response from Text execution.");
         }
 
         private JsonNode ExecuteHttp(HttpTransport transport, JsonObject inputs)
@@ -167,7 +190,10 @@ namespace csharp_utcp
                 if (transport.Auth.AuthType == "api_key")
                 {
                     var apiKey = ResolveVariable(transport.Auth.ApiKey);
-                    client.DefaultRequestHeaders.Add(transport.Auth.VarName, apiKey);
+                    if (transport.Auth.VarName != null)
+                    {
+                        client.DefaultRequestHeaders.Add(transport.Auth.VarName, apiKey);
+                    }
                 }
                 else
                 {
@@ -186,7 +212,7 @@ namespace csharp_utcp
                 var query = System.Web.HttpUtility.ParseQueryString(uriBuilder.Query);
                 foreach (var input in inputs)
                 {
-                    query[input.Key] = input.Value.ToString();
+                    query[input.Key] = input.Value?.ToString();
                 }
                 uriBuilder.Query = query.ToString();
                 response = client.GetAsync(uriBuilder.ToString()).Result;
@@ -203,12 +229,12 @@ namespace csharp_utcp
 
             response.EnsureSuccessStatusCode();
             var responseBody = response.Content.ReadAsStringAsync().Result;
-            return JsonNode.Parse(responseBody);
+            return JsonNode.Parse(responseBody) ?? throw new JsonException("Failed to parse response from HTTP execution.");
         }
 
-        private string ResolveVariable(string value)
+        private string? ResolveVariable(string? value)
         {
-            if (value.StartsWith("$"))
+            if (value != null && value.StartsWith("$"))
             {
                 var varName = value.Substring(1);
                 if (_config.Variables.TryGetValue(varName, out var resolvedValue))
@@ -233,21 +259,28 @@ namespace csharp_utcp
                 }
             };
 
-            foreach (var arg in transport.Args)
+            if (transport.Args != null)
             {
-                var processedArg = arg;
-                foreach (var input in inputs)
+                foreach (var arg in transport.Args)
                 {
-                    processedArg = processedArg.Replace($"{{{input.Key}}}", input.Value.ToString());
+                    var processedArg = arg;
+                    foreach (var input in inputs)
+                    {
+                        processedArg = processedArg.Replace($"{{{input.Key}}}", input.Value?.ToString() ?? string.Empty);
+                    }
+                    var resolvedArg = ResolveVariable(processedArg);
+                    if (resolvedArg != null)
+                    {
+                        process.StartInfo.ArgumentList.Add(resolvedArg);
+                    }
                 }
-                process.StartInfo.ArgumentList.Add(ResolveVariable(processedArg));
             }
 
             process.Start();
             var output = process.StandardOutput.ReadToEnd();
             process.WaitForExit();
 
-            return JsonNode.Parse(output);
+            return JsonNode.Parse(output) ?? throw new JsonException("Failed to parse response from CLI execution.");
         }
     }
 }

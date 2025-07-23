@@ -12,51 +12,113 @@ namespace TestRunner
             client.LoadManual("manual.json");
 
             Console.WriteLine("Executing 'get_weather' tool...");
-            var weatherInputs = new JsonObject { ["location"] = "San Francisco" };
-            var weatherResult = client.ExecuteTool("get_weather", weatherInputs);
-            Console.WriteLine($"Weather result: {weatherResult}");
-
-            Console.WriteLine("\nExecuting 'resize_image' tool...");
-            var resizeInputs = new JsonObject { ["source"] = "my_image.jpg", ["width"] = 800, ["height"] = 600 };
-            var resizeResult = client.ExecuteTool("resize_image", resizeInputs);
-            Console.WriteLine($"Resize result: {resizeResult}");
-
-            Console.WriteLine("\nExecuting 'get_user' tool...");
-            var userInputs = new JsonObject { ["id"] = "123" };
-            var userResult = client.ExecuteTool("get_user", userInputs);
-            Console.WriteLine($"User result: {userResult}");
-
-            Console.WriteLine("\nExecuting 'get_stock_prices' tool...");
-            var stockInputs = new JsonObject { ["symbol"] = "MSFT" };
-            var stockStream = client.ExecuteStream("get_stock_prices", stockInputs);
-            await foreach (var priceUpdate in stockStream)
+            try
             {
-                Console.WriteLine($"Stock price update: {priceUpdate}");
-                break; // Only take one for testing
+                var weatherInputs = new JsonObject { ["location"] = "San Francisco" };
+                var weatherResult = client.ExecuteTool("get_weather", weatherInputs);
+                Console.WriteLine($"Weather result: {weatherResult}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing 'get_weather': {ex.Message}");
             }
 
+
+            Console.WriteLine("\nExecuting 'resize_image' tool...");
+            try
+            {
+                var resizeInputs = new JsonObject { ["source"] = "my_image.jpg", ["width"] = 800, ["height"] = 600 };
+                var resizeResult = client.ExecuteTool("resize_image", resizeInputs);
+                Console.WriteLine($"Resize result: {resizeResult}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing 'resize_image': {ex.Message}");
+            }
+
+            Console.WriteLine("\nExecuting 'get_user' tool...");
+            try
+            {
+                var userInputs = new JsonObject { ["id"] = "123" };
+                var userResult = client.ExecuteTool("get_user", userInputs);
+                Console.WriteLine($"User result: {userResult}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing 'get_user': {ex.Message}");
+            }
+
+
+            Console.WriteLine("\nExecuting 'get_stock_prices' tool...");
+            try
+            {
+                var stockInputs = new JsonObject { ["symbol"] = "MSFT" };
+                var stockStream = client.ExecuteStream("get_stock_prices", stockInputs);
+                await foreach (var priceUpdate in stockStream)
+                {
+                    Console.WriteLine($"Stock price update: {priceUpdate}");
+                    break; // Only take one for testing
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing 'get_stock_prices': {ex.Message}");
+            }
+
+
             Console.WriteLine("\nExecuting 'chat' tool...");
-            var chatInputs = new JsonObject { ["message"] = "Hello" };
-            var chatStream = client.ExecuteStream("chat", chatInputs);
-            // The websocket stream is opened, but we need to send a message to get a reply.
-            // This is not yet implemented in the WebSocketTransport.
-            // For now, we will just assume the connection was successful.
-            Console.WriteLine("Chat stream opened.");
+            try
+            {
+                var chatInputs = new JsonObject { ["message"] = "Hello" };
+                var chatStream = client.ExecuteStream("chat", chatInputs);
+                // The websocket stream is opened, but we need to send a message to get a reply.
+                // This is not yet implemented in the WebSocketTransport.
+                // For now, we will just assume the connection was successful.
+                Console.WriteLine("Chat stream opened.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing 'chat': {ex.Message}");
+            }
+
 
             Console.WriteLine("\nExecuting 'get_product' tool...");
-            var productInputs = new JsonObject { ["id"] = "456" };
-            var productResult = client.ExecuteTool("get_product", productInputs);
-            Console.WriteLine($"Product result: {productResult}");
+            try
+            {
+                var productInputs = new JsonObject { ["id"] = "456" };
+                var productResult = client.ExecuteTool("get_product", productInputs);
+                Console.WriteLine($"Product result: {productResult}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing 'get_product': {ex.Message}");
+            }
+
 
             Console.WriteLine("\nExecuting 'echo_tcp' tool...");
-            var tcpInputs = new JsonObject { ["message"] = "Hello TCP" };
-            var tcpResult = client.ExecuteTool("echo_tcp", tcpInputs);
-            Console.WriteLine($"TCP result: {tcpResult}");
+            try
+            {
+                var tcpInputs = new JsonObject { ["message"] = "Hello TCP" };
+                var tcpResult = client.ExecuteTool("echo_tcp", tcpInputs);
+                Console.WriteLine($"TCP result: {tcpResult}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing 'echo_tcp': {ex.Message}");
+            }
+
 
             Console.WriteLine("\nExecuting 'echo_udp' tool...");
-            var udpInputs = new JsonObject { ["message"] = "Hello UDP" };
-            var udpResult = client.ExecuteTool("echo_udp", udpInputs);
-            Console.WriteLine($"UDP result: {udpResult}");
+            try
+            {
+                var udpInputs = new JsonObject { ["message"] = "Hello UDP" };
+                var udpResult = client.ExecuteTool("echo_udp", udpInputs);
+                Console.WriteLine($"UDP result: {udpResult}");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error executing 'echo_udp': {ex.Message}");
+            }
         }
     }
 }

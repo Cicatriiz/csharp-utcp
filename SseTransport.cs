@@ -16,9 +16,12 @@ namespace csharp_utcp
         {
             using var client = new HttpClient();
             var url = Url;
-            foreach (var input in inputs)
+            if (inputs != null)
             {
-                url = url.Replace($"{{{input.Key}}}", input.Value.ToString());
+                foreach (var input in inputs)
+                {
+                    url = url.Replace($"{{{input.Key}}}", input.Value?.ToString() ?? string.Empty);
+                }
             }
 
             var response = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
@@ -30,10 +33,14 @@ namespace csharp_utcp
             while (!reader.EndOfStream)
             {
                 var line = await reader.ReadLineAsync();
-                if (line.StartsWith("data:"))
+                if (line != null && line.StartsWith("data:"))
                 {
                     var data = line.Substring(5).Trim();
-                    yield return JsonNode.Parse(data);
+                    var jsonNode = JsonNode.Parse(data);
+                    if (jsonNode != null)
+                    {
+                        yield return jsonNode;
+                    }
                 }
             }
         }

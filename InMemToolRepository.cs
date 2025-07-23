@@ -11,7 +11,7 @@ namespace csharp_utcp
             _tools[tool.Name] = tool;
         }
 
-        public Tool GetTool(string name)
+        public Tool? GetTool(string name)
         {
             _tools.TryGetValue(name, out var tool);
             return tool;
