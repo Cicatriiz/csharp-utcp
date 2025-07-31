@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace csharp_utcp
+namespace utcp
 {
     public class TcpTransport : Transport
     {

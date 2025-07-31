@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Text.Json.Serialization;
 
-namespace csharp_utcp
+namespace utcp
 {
     public class WebSocketTransport : Transport, IStreamableTransport
     {

@@ -4,7 +4,7 @@ using System.Text.Json.Nodes;
 using Microsoft.OpenApi.Models;
 using Microsoft.OpenApi.Readers;
 
-namespace csharp_utcp
+namespace utcp
 {
     public class OpenApiConverter
     {

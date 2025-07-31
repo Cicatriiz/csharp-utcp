@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RootNamespace>csharp_utcp</RootNamespace>
+    <RootNamespace>utcp</RootNamespace>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
@@ -23,6 +23,10 @@
     <PackageReference Include="Microsoft.OpenApi.Readers" Version="1.6.24" />
     <PackageReference Include="System.Configuration.ConfigurationManager" Version="9.0.7" />
     <None Include="README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="TransportLogic\**\*.cs" />
   </ItemGroup>
 
 </Project>

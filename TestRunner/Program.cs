@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Text.Json.Nodes;
-using csharp_utcp;
+using utcp;
 
 namespace TestRunner
 {

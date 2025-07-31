@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace csharp_utcp
+namespace utcp
 {
     public interface IToolRepository
     {

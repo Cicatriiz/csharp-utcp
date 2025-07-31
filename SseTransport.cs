@@ -5,7 +5,7 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using System.Text.Json.Serialization;
 
-namespace csharp_utcp
+namespace utcp
 {
     public class SseTransport : Transport, IStreamableTransport
     {

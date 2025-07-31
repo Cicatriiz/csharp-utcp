@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
-namespace csharp_utcp
+namespace utcp
 {
     public class Tool
     {
