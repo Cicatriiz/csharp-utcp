@@ -13,6 +13,21 @@ namespace utcp
         [JsonPropertyName("url")]
         public required string Url { get; set; }
 
+        [JsonPropertyName("protocol")]
+        public string? Protocol { get; set; }
+
+        [JsonPropertyName("keep_alive")]
+        public bool KeepAlive { get; set; } = true;
+
+        [JsonPropertyName("auth")]
+        public Auth? Auth { get; set; }
+
+        [JsonPropertyName("headers")]
+        public System.Collections.Generic.Dictionary<string, string>? Headers { get; set; }
+
+        [JsonPropertyName("header_fields")]
+        public System.Collections.Generic.List<string>? HeaderFields { get; set; }
+
         public async IAsyncEnumerable<JsonNode> Stream(JsonObject inputs)
         {
             using var ws = new ClientWebSocket();

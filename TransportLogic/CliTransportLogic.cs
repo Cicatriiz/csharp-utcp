@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.Threading.Tasks;
 
 namespace utcp
 {
@@ -11,7 +12,7 @@ namespace utcp
             _config = config;
         }
 
-        public JsonNode Execute(Transport transport, JsonObject inputs)
+        public async Task<JsonNode> ExecuteAsync(Transport transport, JsonObject inputs)
         {
             var cliTransport = (CliTransport)transport;
             var process = new System.Diagnostics.Process
@@ -43,8 +44,8 @@ namespace utcp
             }
 
             process.Start();
-            var output = process.StandardOutput.ReadToEnd();
-            process.WaitForExit();
+            var output = await process.StandardOutput.ReadToEndAsync();
+            await process.WaitForExitAsync();
 
             return JsonNode.Parse(output) ?? throw new System.Text.Json.JsonException("Failed to parse response from CLI execution.");
         }

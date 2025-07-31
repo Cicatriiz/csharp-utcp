@@ -1,12 +1,13 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Threading.Tasks;
 using Grpc.Net.Client;
 
 namespace utcp
 {
     public class GrpcTransportLogic : ITransport
     {
-        public JsonNode Execute(Transport transport, JsonObject inputs)
+        public async Task<JsonNode> ExecuteAsync(Transport transport, JsonObject inputs)
         {
             var grpcTransport = (GrpcTransport)transport;
             var channel = GrpcChannel.ForAddress(grpcTransport.Address);
@@ -23,9 +24,7 @@ namespace utcp
             var requestType = method.GetParameters()[0].ParameterType;
             var request = JsonSerializer.Deserialize(inputs.ToString(), requestType);
             var responseTask = method.Invoke(client, new object[] { request!, new Grpc.Core.CallOptions() });
-            if (responseTask == null) throw new System.InvalidOperationException("gRPC method invocation returned null.");
-
-            var response = ((dynamic)responseTask).Result;
+            var response = await (dynamic)responseTask;
             return JsonSerializer.SerializeToNode(response)!;
         }
     }

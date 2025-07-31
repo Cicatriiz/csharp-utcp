@@ -50,7 +50,7 @@ namespace utcp
             return _toolSearchStrategy.Search(_toolRepository.GetAllTools(), query);
         }
 
-        public JsonNode ExecuteTool(string toolName, JsonObject inputs)
+        public async Task<JsonNode> ExecuteToolAsync(string toolName, JsonObject inputs)
         {
             var tool = _toolRepository.GetTool(toolName);
             if (tool == null)
@@ -75,7 +75,7 @@ namespace utcp
                 _ => throw new NotSupportedException($"Transport type '{tool.ToolTransport.TransportType}' is not supported for non-streaming execution.")
             };
 
-            return transportLogic.Execute(tool.ToolTransport, inputs);
+            return await transportLogic.ExecuteAsync(tool.ToolTransport, inputs);
         }
 
         public IAsyncEnumerable<JsonNode> ExecuteStream(string toolName, JsonObject inputs)

@@ -2,21 +2,46 @@ using System.Text.Json.Serialization;
 
 namespace utcp
 {
-    public class Auth
+    [JsonConverter(typeof(AuthConverter))]
+    public abstract class Auth
     {
         [JsonPropertyName("auth_type")]
         public required string AuthType { get; set; }
+    }
 
+    public class ApiKeyAuth : Auth
+    {
         [JsonPropertyName("api_key")]
-        public string? ApiKey { get; set; }
+        public required string ApiKey { get; set; }
 
         [JsonPropertyName("var_name")]
-        public string? VarName { get; set; }
+        public string VarName { get; set; } = "X-Api-Key";
 
-        [JsonPropertyName("token")]
-        public string? Token { get; set; }
+        [JsonPropertyName("location")]
+        public string Location { get; set; } = "header";
+    }
 
-        [JsonPropertyName("scheme")]
-        public string? Scheme { get; set; }
+    public class BasicAuth : Auth
+    {
+        [JsonPropertyName("username")]
+        public required string Username { get; set; }
+
+        [JsonPropertyName("password")]
+        public required string Password { get; set; }
+    }
+
+    public class OAuth2Auth : Auth
+    {
+        [JsonPropertyName("token_url")]
+        public required string TokenUrl { get; set; }
+
+        [JsonPropertyName("client_id")]
+        public required string ClientId { get; set; }
+
+        [JsonPropertyName("client_secret")]
+        public required string ClientSecret { get; set; }
+
+        [JsonPropertyName("scope")]
+        public string? Scope { get; set; }
     }
 }

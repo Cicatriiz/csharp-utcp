@@ -4,11 +4,21 @@
     <ProjectReference Include="../csharp-utcp.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="GraphQL.Primitives" Version="6.1.0" />
+    <PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
+  </ItemGroup>
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <FrameworkReference>Microsoft.AspNetCore.App</FrameworkReference>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Protos\product.proto" GrpcServices="Server" />
+  </ItemGroup>
 
 </Project>

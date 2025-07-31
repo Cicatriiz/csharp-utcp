@@ -13,5 +13,16 @@ namespace utcp
         [JsonPropertyName("method")]
         public required string Method { get; set; }
 
+        [JsonPropertyName("service_name")]
+        public required string ServiceName { get; set; }
+
+        [JsonPropertyName("method_name")]
+        public required string MethodName { get; set; }
+
+        [JsonPropertyName("use_ssl")]
+        public bool UseSsl { get; set; } = false;
+
+        [JsonPropertyName("auth")]
+        public Auth? Auth { get; set; }
     }
 }

@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package TestRunner;
+
+service ProductService {
+  rpc GetProduct (ProductRequest) returns (ProductResponse);
+}
+
+message ProductRequest {
+  string id = 1;
+}
+
+message ProductResponse {
+  string id = 1;
+  string name = 2;
+}

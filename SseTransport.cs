@@ -12,6 +12,27 @@ namespace utcp
         [JsonPropertyName("url")]
         public required string Url { get; set; }
 
+        [JsonPropertyName("event_type")]
+        public string? EventType { get; set; }
+
+        [JsonPropertyName("reconnect")]
+        public bool Reconnect { get; set; } = true;
+
+        [JsonPropertyName("retry_timeout")]
+        public int RetryTimeout { get; set; } = 30000;
+
+        [JsonPropertyName("auth")]
+        public Auth? Auth { get; set; }
+
+        [JsonPropertyName("headers")]
+        public System.Collections.Generic.Dictionary<string, string>? Headers { get; set; }
+
+        [JsonPropertyName("body_field")]
+        public string? BodyField { get; set; }
+
+        [JsonPropertyName("header_fields")]
+        public System.Collections.Generic.List<string>? HeaderFields { get; set; }
+
         public async IAsyncEnumerable<JsonNode> Stream(JsonObject inputs)
         {
             using var client = new HttpClient();
