@@ -33,9 +33,13 @@
 # Build results
 [Bb]in/
 [Oo]bj/
+release-artifacts/
 
 # Visual Studio Code
 .vscode/
 
 # Rider
 .idea/
+
+# Build scripts
+build-release.fish

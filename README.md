@@ -21,7 +21,7 @@ To get started with the C# UTCP library, you'll need to have the .NET SDK instal
 You can add the library to your project using the .NET CLI:
 
 ```bash
-dotnet add package csharp-utcp
+dotnet add package utcp
 ```
 
 ### Basic Usage
@@ -31,13 +31,14 @@ Here's a simple example of how to use the `UtcpClient` to load a tool manual and
 ```csharp
 using System;
 using System.Text.Json.Nodes;
-using csharp_utcp;
+using System.Threading.Tasks;
+using utcp;
 
 var client = new UtcpClient();
 client.LoadManual("path/to/your/manual.json");
 
 var inputs = new JsonObject { ["location"] = "London" };
-var result = client.ExecuteTool("get_weather", inputs);
+var result = await client.ExecuteToolAsync("get_weather", inputs);
 
 Console.WriteLine(result);
 ```
@@ -82,7 +83,7 @@ public class Tool
 
 ### Authentication
 
-UTCP supports several authentication methods to secure tool access. The `auth` object within a provider's configuration specifies the authentication method to use.
+UTCP supports several authentication methods to secure tool access. The `auth` object within a transport's configuration specifies the authentication method to use.
 
 #### API Key
 
@@ -92,24 +93,40 @@ Authentication using a static API key, typically sent in a request header.
 {
   "auth_type": "api_key",
   "api_key": "$YOUR_SECRET_API_KEY",
-  "var_name": "X-API-Key"
+  "var_name": "X-API-Key",
+  "location": "header"
 }
 ```
 
-#### Bearer Token
+#### Basic Auth
 
-Authentication using a bearer token.
+Authentication using a username and password.
 
 ```json
 {
-  "auth_type": "bearer",
-  "token": "$YOUR_BEARER_TOKEN"
+  "auth_type": "basic",
+  "username": "your_username",
+  "password": "your_password"
 }
 ```
 
-### Providers
+#### OAuth2
 
-Providers are at the heart of UTCP's flexibility. They define the communication protocol for a given tool. UTCP supports a wide range of provider types:
+Authentication using the OAuth2 client credentials flow.
+
+```json
+{
+  "auth_type": "oauth2",
+  "token_url": "https://auth.example.com/token",
+  "client_id": "your_client_id",
+  "client_secret": "your_client_secret",
+  "scope": "read write"
+}
+```
+
+### Transports
+
+Transports are at the heart of UTCP's flexibility. They define the communication protocol for a given tool. UTCP supports a wide range of transport types:
 
 *   `http`
 *   `cli`
@@ -121,9 +138,9 @@ Providers are at the heart of UTCP's flexibility. They define the communication 
 *   `tcp`
 *   `udp`
 
-## Provider Configuration Examples
+## Transport Configuration Examples
 
-### HTTP Provider
+### HTTP Transport
 
 ```json
 {
@@ -138,7 +155,7 @@ Providers are at the heart of UTCP's flexibility. They define the communication 
 }
 ```
 
-### CLI Provider
+### CLI Transport
 
 ```json
 {
