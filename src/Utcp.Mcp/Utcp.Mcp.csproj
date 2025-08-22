@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageId>Utcp.Mcp</PackageId>
+    <Description>UTCP MCP bridge for .NET</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../Utcp.Core/Utcp.Core.csproj" />
+    <ProjectReference Include="../Utcp.Http/Utcp.Http.csproj" />
+  </ItemGroup>
+
+</Project>

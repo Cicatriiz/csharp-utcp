@@ -1,0 +1,38 @@
+name: build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  build-test-pack:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Restore
+        run: dotnet restore csharp-utcp/Utcp.sln
+      - name: Build
+        run: dotnet build csharp-utcp/Utcp.sln -c Release --no-restore
+      - name: Test
+        run: dotnet test csharp-utcp/Utcp.sln -c Release --no-build --verbosity normal
+      - name: Pack Core
+        run: dotnet pack csharp-utcp/src/Utcp.Core/Utcp.Core.csproj -c Release --no-build -o artifacts
+      - name: Pack Http
+        run: dotnet pack csharp-utcp/src/Utcp.Http/Utcp.Http.csproj -c Release --no-build -o artifacts
+      - name: Pack Cli
+        run: dotnet pack csharp-utcp/src/Utcp.Cli/Utcp.Cli.csproj -c Release --no-build -o artifacts
+      - name: Pack Text
+        run: dotnet pack csharp-utcp/src/Utcp.Text/Utcp.Text.csproj -c Release --no-build -o artifacts
+      - name: Pack Mcp
+        run: dotnet pack csharp-utcp/src/Utcp.Mcp/Utcp.Mcp.csproj -c Release --no-build -o artifacts
+      - name: Pack Socket
+        run: dotnet pack csharp-utcp/src/Utcp.Socket/Utcp.Socket.csproj -c Release --no-build -o artifacts
+      - name: Pack Gql
+        run: dotnet pack csharp-utcp/src/Utcp.Gql/Utcp.Gql.csproj -c Release --no-build -o artifacts
+

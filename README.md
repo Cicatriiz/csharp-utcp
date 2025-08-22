@@ -1,191 +1,249 @@
-# C# UTCP Implementation
+This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-This is a C# implementation of the Universal Tool Calling Protocol (UTCP). It provides a flexible and extensible framework for defining and interacting with tools across a wide variety of communication protocols.
+## UTCP for .NET (C# 12, .NET 8)
 
-## Introduction
+Idiomatic .NET SDK for the Universal Tool Calling Protocol (UTCP), mirroring the Python reference implementation.
 
-The Universal Tool Calling Protocol (UTCP) is a modern, flexible, and scalable standard for defining and interacting with tools across a wide variety of communication protocols. It is designed to be easy to use, interoperable, and extensible, making it a powerful choice for building and consuming tool-based services.
+### Features
+- Core models and client with async APIs and CancellationToken
+- Pluggable communication protocols: HTTP (JSON + SSE), CLI, Text, MCP; Socket and GraphQL scaffolds
+- OpenAPI converter to UTCP tools
+- In-memory concurrent tool repository and search strategy
+- Variable substitution with namespacing and env support
+- Post-processing (FilterDict)
+- System.Text.Json with source-gen and polymorphism
+- Logging via Microsoft.Extensions.Logging
 
-In contrast to other protocols like MCP, UTCP places a strong emphasis on:
+### Repository layout
+- `src/Utcp.Core` – core types, client, search, substitution, post-processing, registry
+- `src/Utcp.Http` – HTTP protocol (including SSE) and OpenAPI converter
+- `src/Utcp.Cli` – CLI protocol (process runner)
+- `src/Utcp.Text` – Text protocol (file read and streaming)
+- `src/Utcp.Mcp` – MCP protocol (HTTP/stdio, OAuth2, SSE, result shaping)
+- `src/Utcp.Socket` – TCP/UDP scaffolds
+- `src/Utcp.Gql` – GraphQL scaffold
+- `tests/*` – xUnit tests with FluentAssertions
+- `samples/*` – client and server samples
 
-*   **Scalability**: UTCP is designed to handle a large number of tools and providers without compromising performance.
-*   **Interoperability**: With support for a wide range of provider types (including HTTP, WebSockets, gRPC, and even CLI tools), UTCP can integrate with almost any existing service or infrastructure.
-*   **Ease of Use**: The protocol is built on simple, well-defined C# classes, making it easy for developers to implement and use.
-
-## Getting Started
-
-To get started with the C# UTCP library, you'll need to have the .NET SDK installed.
-
-### Installation
-
-You can add the library to your project using the .NET CLI:
-
+### Install / Build
 ```bash
-dotnet add package utcp
+dotnet build
+dotnet test
 ```
 
-### Basic Usage
-
-Here's a simple example of how to use the `UtcpClient` to load a tool manual and execute a tool:
-
+### Quick start
+Register a manual and call a tool:
 ```csharp
-using System;
-using System.Text.Json.Nodes;
-using System.Threading.Tasks;
-using utcp;
+using Utcp.Core;
+using Utcp.Core.Models;
+using Utcp.Http;
 
-var client = new UtcpClient();
-client.LoadManual("path/to/your/manual.json");
+var client = await UtcpClientImplementation.CreateAsync(config: new UtcpClientConfig
+{
+    ToolRepository = new Utcp.Core.Repositories.InMemToolRepository(),
+    ToolSearchStrategy = new Utcp.Core.Search.TagAndDescriptionWordMatchStrategy(),
+    ManualCallTemplates = new []
+    {
+        (CallTemplate)new HttpCallTemplate
+        {
+            CallTemplateType = "http",
+            Name = "openlibrary",
+            Method = "GET",
+            Url = new Uri("https://openlibrary.org/works/OL45883W.json"),
+        }
+    }
+});
 
-var inputs = new JsonObject { ["location"] = "London" };
-var result = await client.ExecuteToolAsync("get_weather", inputs);
-
+var result = await client.CallToolAsync("openlibrary", new Dictionary<string, object?>());
 Console.WriteLine(result);
 ```
 
-## Protocol Specification
-
-UTCP is defined by a set of core data models that describe tools, how to connect to them (providers), and how to secure them (authentication).
-
-### Tool Discovery
-
-For a client to use a tool, it must be provided with a `UtcpManual` object. This manual contains a list of all the tools available from a provider.
-
-#### `UtcpManual` Model
-
+### MCP (Model Context Protocol)
+Multi-server configuration with OAuth2 and HTTP SSE streaming:
 ```csharp
-public class UTCPManual
+using Utcp.Mcp;
+using Utcp.Core.Models;
+
+var mcpTemplate = new McpCallTemplate
 {
-    public string UtcpVersion { get; set; }
-    public string ManualVersion { get; set; }
-    public List<Tool> Tools { get; set; }
-}
-```
-
-### Tool Definition
-
-Each tool is defined by the `Tool` model.
-
-#### `Tool` Model
-
-```csharp
-public class Tool
-{
-    public string Name { get; set; }
-    public string Description { get; set; }
-    public JsonObject Inputs { get; set; }
-    public JsonObject Outputs { get; set; }
-    public List<string> Tags { get; set; }
-    public int? AverageResponseSize { get; set; }
-    public Transport ToolTransport { get; set; }
-}
-```
-
-### Authentication
-
-UTCP supports several authentication methods to secure tool access. The `auth` object within a transport's configuration specifies the authentication method to use.
-
-#### API Key
-
-Authentication using a static API key, typically sent in a request header.
-
-```json
-{
-  "auth_type": "api_key",
-  "api_key": "$YOUR_SECRET_API_KEY",
-  "var_name": "X-API-Key",
-  "location": "header"
-}
-```
-
-#### Basic Auth
-
-Authentication using a username and password.
-
-```json
-{
-  "auth_type": "basic",
-  "username": "your_username",
-  "password": "your_password"
-}
-```
-
-#### OAuth2
-
-Authentication using the OAuth2 client credentials flow.
-
-```json
-{
-  "auth_type": "oauth2",
-  "token_url": "https://auth.example.com/token",
-  "client_id": "your_client_id",
-  "client_secret": "your_client_secret",
-  "scope": "read write"
-}
-```
-
-### Transports
-
-Transports are at the heart of UTCP's flexibility. They define the communication protocol for a given tool. UTCP supports a wide range of transport types:
-
-*   `http`
-*   `cli`
-*   `text`
-*   `sse`
-*   `graphql`
-*   `websocket`
-*   `grpc`
-*   `tcp`
-*   `udp`
-
-## Transport Configuration Examples
-
-### HTTP Transport
-
-```json
-{
-  "transport_type": "http",
-  "url": "https://api.example.com/weather",
-  "http_method": "GET",
-  "auth": {
-    "auth_type": "api_key",
-    "api_key": "$WEATHER_API_KEY",
-    "var_name": "X-Api-Key"
-  }
-}
-```
-
-### CLI Transport
-
-```json
-{
-  "transport_type": "cli",
-  "command": "my-cli-tool",
-  "args": ["--input", "{inputValue}"]
-}
-```
-
-## UTCP Client Architecture
-
-The C# UTCP client provides a robust and extensible framework for interacting with tool providers. Its architecture is designed around a few key components that work together to manage, execute, and search for tools.
-
-### Core Components
-
-*   **`UtcpClient`**: The main entry point for interacting with the UTCP ecosystem.
-*   **`UtcpClientConfig`**: A class that defines the client's configuration, including variables for authentication.
-*   **`Transport`**: An abstract base class that defines the contract for all transport implementations.
-*   **`IToolRepository`**: An interface that defines the contract for storing and retrieving tools.
-*   **`IToolSearchStrategy`**: An interface for implementing different tool search algorithms.
-
-### Initialization and Configuration
-
-```csharp
-var config = new UtcpClientConfig
-{
-    Variables = new Dictionary<string, string>
+    CallTemplateType = "mcp",
+    Name = "mcp",
+    Config = new McpConfig
     {
-        { "WEATHER_API_KEY", "your-secret-key" }
-    }
+        McpServers = new Dictionary<string, McpServerConfig>
+        {
+            ["stdioServer"] = new() { Command = "my-mcp-server" },
+            ["httpServer"] = new() { Url = "http://localhost:7400/mcp", Headers = new Dictionary<string,string>{{"X-Client","Utcp"}} },
+        }
+    },
+    Auth = new OAuth2Auth { AuthType = "oauth2", TokenUrl = "http://localhost:7400/token", ClientId = "id", ClientSecret = "secret" }
 };
 
-var client = new UtcpClient(config: config);
+var register = await client.RegisterManualAsync(mcpTemplate);
+var mcpResult = await client.CallToolAsync("echo", new Dictionary<string, object?>{ ["message"] = "hi" });
+await foreach (var chunk in client.CallToolStreamingAsync("echo", new Dictionary<string, object?>{ ["message"] = "hi" }))
+{
+    Console.WriteLine(chunk);
+}
+```
+
+### Variable substitution
+Namespaced variables follow the pattern `manual__{name}_VAR`. You can pass variables directly or rely on environment variables.
+```csharp
+using Utcp.Core.Substitution;
+
+var substitutor = new DefaultVariableSubstitutor();
+var cfg = new UtcpClientConfig { ToolRepository = repo, ToolSearchStrategy = search, Variables = new(){ ["manual__openlibrary_API_KEY"] = "123" } };
+var substituted = substitutor.Substitute(new Dictionary<string, object?> { ["auth"] = new Dictionary<string, object?>{ ["token"] = "${API_KEY}" } }, cfg, "manual_openlibrary");
+```
+
+### OpenAPI conversion
+End-to-end conversion using `OpenApiToUtcpConverter`:
+```csharp
+using Utcp.Http.OpenApi;
+using System.Net.Http;
+
+// Load an OpenAPI document
+var http = new HttpClient();
+var specUrl = "https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.yaml";
+var yaml = await http.GetStringAsync(specUrl);
+
+// Convert (reader supports JSON/YAML via Microsoft.OpenApi.Readers)
+var converter = new OpenApiToUtcpConverter();
+var manual = converter.ConvertFromString(yaml, specUrl);
+
+// Register the converted tools
+var cfg = new UtcpClientConfig
+{
+    ToolRepository = new Utcp.Core.Repositories.InMemToolRepository(),
+    ToolSearchStrategy = new Utcp.Core.Search.TagAndDescriptionWordMatchStrategy(),
+    ManualCallTemplates = Array.Empty<CallTemplate>()
+};
+var client = await UtcpClientImplementation.CreateAsync(config: cfg);
+await client.RegisterManualAsync(new HttpCallTemplate { CallTemplateType = "http", Name = manual.Tools.First().ToolCallTemplate.Name, Url = new Uri("http://example") });
+
+// Call one of the converted tools (operationId)
+var tools = await client.SearchToolsAsync("pet store", 5);
+var anyTool = tools.First();
+var output = await client.CallToolAsync(anyTool.Name, new Dictionary<string, object?>());
+Console.WriteLine(output);
+```
+See also `tests/Utcp.Http.Tests/OpenApiConverterTests.cs` for focused examples.
+
+### Samples
+- `samples/ClientSample` – demonstrates setup, HTTP + MCP configuration
+- `samples/ServerSample` – minimal ASP.NET API with UTCP discovery endpoint
+
+### Full examples with expected outputs
+
+#### CLI
+Run a local command and capture stdout/stderr:
+```csharp
+using Utcp.Cli;
+
+var client = await UtcpClientImplementation.CreateAsync(config: new UtcpClientConfig
+{
+    ToolRepository = new Utcp.Core.Repositories.InMemToolRepository(),
+    ToolSearchStrategy = new Utcp.Core.Search.TagAndDescriptionWordMatchStrategy(),
+});
+
+// Register a CLI tool (e.g., echo)
+var template = new CliCallTemplate { CallTemplateType = "cli", Name = "local", Command = "/bin/echo" };
+await client.RegisterManualAsync(template);
+
+// Call it
+var resp = await client.CallToolAsync("local", new Dictionary<string, object?> { ["args"] = new [] { "hello" } });
+Console.WriteLine(resp); // expected: "hello\n"
+```
+
+#### Text
+Read a file fully and as a stream of chunks:
+```csharp
+using Utcp.Text;
+
+var text = new TextCallTemplate { CallTemplateType = "text", Name = "docs", FilePath = "README.md" };
+await client.RegisterManualAsync(text);
+
+var all = await client.CallToolAsync("docs", new Dictionary<string, object?>());
+Console.WriteLine(((string)all!).Length > 0); // expected: True
+
+var streamed = client.CallToolStreamingAsync("docs", new Dictionary<string, object?>());
+await foreach (var chunk in streamed)
+{
+    Console.WriteLine(chunk); // expected: lines (or chunks if ChunkSizeBytes set)
+}
+```
+
+#### MCP
+Echo via MCP HTTP and stdio with result shaping:
+```csharp
+using Utcp.Mcp;
+
+var mcp = new McpCallTemplate
+{
+    CallTemplateType = "mcp",
+    Name = "mcp",
+    Config = new McpConfig
+    {
+        McpServers = new Dictionary<string, McpServerConfig>
+        {
+            ["http"] = new() { Url = "http://localhost:7400/mcp" },
+            ["stdio"] = new() { Command = "my-mcp-server" },
+        }
+    }
+};
+await client.RegisterManualAsync(mcp);
+
+var r = await client.CallToolAsync("echo", new Dictionary<string, object?> { ["message"] = "test" });
+Console.WriteLine(r); // expected: { reply = "you said: test" } or similar shaped object/string
+
+await foreach (var s in client.CallToolStreamingAsync("echo", new Dictionary<string, object?> { ["message"] = "test" }))
+{
+    Console.WriteLine(s); // expected: streamed chunks/events if server uses SSE
+}
+```
+
+### Protocol registration
+Protocols are registered in `Utcp.Core.Protocols.ProtocolRegistry`. Custom protocols can be added at runtime:
+```csharp
+using Utcp.Core.Protocols;
+ProtocolRegistry.Register("my-protocol", new MyProtocol());
+```
+
+### Post-processing
+Use post-processors to shape results. A simple filter example:
+```csharp
+using Utcp.Core.PostProcessing;
+var cfg = new UtcpClientConfig { ToolRepository = repo, ToolSearchStrategy = search, PostProcessing = new [] { new FilterDictPostProcessor(new []{"allowed"}) } };
+```
+
+### Tool search
+Default search `TagAndDescriptionWordMatchStrategy` ranks tools by tag hits and description term overlap:
+```csharp
+var results = await client.SearchToolsAsync("weather forecast", limit: 5);
+```
+
+### Concurrency and thread safety
+`InMemToolRepository` uses async synchronization to support concurrent reads/writes safely. All client operations are async and accept `CancellationToken`.
+
+### Error handling
+- Rich argument and state validation with specific exceptions
+- HTTP paths use `EnsureSuccessStatusCode` and propagate details
+- MCP stdio paths surface process start and JSON parsing errors
+
+### Parity with Python
+- Data models map 1:1 (Auth, CallTemplate, Tool, UtcpManual, UtcpClientConfig, RegisterManualResult)
+- MCP mirrors registration, calling, streaming, OAuth2 token flows, and result shaping
+- OpenAPI converter maps security schemes and schemas similarly; see tests for parity
+- Variable substitution supports namespacing and env resolution
+
+### CI & Packaging
+- GitHub Actions builds/tests/packs on Windows, Linux, macOS (`.github/workflows/build.yml`)
+- NuGet metadata via `Directory.Build.props` (packages per project)
+
+### License
+MPL-2.0
+
+
+

@@ -1,0 +1,22 @@
+root = true
+
+[*.cs]
+# Temporarily relax analyzers for rapid scaffold
+dotnet_analyzer_diagnostic.category-Style.severity = none
+dotnet_analyzer_diagnostic.category-Design.severity = none
+dotnet_analyzer_diagnostic.category-Performance.severity = none
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.CA1716.severity = none
+dotnet_diagnostic.CA1819.severity = none
+
+[tests/**/*.cs]
+dotnet_diagnostic.SA1633.severity = none
+dotnet_diagnostic.SA1600.severity = none
+dotnet_diagnostic.CS1591.severity = none
+dotnet_diagnostic.SA1505.severity = none
+dotnet_diagnostic.SA1508.severity = none
+
+[samples/**/*.cs]
+dotnet_diagnostic.SA1633.severity = none
+dotnet_diagnostic.CA1303.severity = none
+
