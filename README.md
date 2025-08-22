@@ -3,10 +3,9 @@
 Idiomatic .NET SDK for the Universal Tool Calling Protocol (UTCP), mirroring the Python reference implementation.
 
 ### What is UTCP?
-UTCP (Universal Tool Calling Protocol) is an open, language-agnostic specification for discovering and invoking tools (functions, APIs, and services) in a consistent way across transports such as HTTP, MCP, CLI, text files, and sockets. It defines standard models for call templates, authentication, variables, and result shaping so clients and servers can interoperate without bespoke integrations. In practice, UTCP lets you register tools from many sources, search them, call them synchronously or as streams, and compose them reliably from any runtime that implements the spec.
+UTCP (Universal Tool Calling Protocol) is an open, language-agnostic specification for discovering and invoking tools (functions, APIs, and services) in a consistent way across transports such as HTTP, MCP, CLI, text files, and sockets. 
 
-
-See the official [UTCP specification](https://github.com/universal-tool-calling-protocol/utcp-specification) for full details. In short, UTCP provides a standardized way for AI systems and other clients to discover and call tools from different providers, regardless of the underlying protocol used (HTTP, WebSocket, CLI, etc.). This specification defines:
+In short, UTCP provides a standardized way for AI systems and other clients to discover and call tools from different providers, regardless of the underlying protocol used (HTTP, WebSocket, CLI, etc.). This specification defines:
 
 - Tool discovery mechanisms
 - Tool call formats
@@ -14,7 +13,9 @@ See the official [UTCP specification](https://github.com/universal-tool-calling-
 - Authentication methods
 - Response handling
 
+In practice, UTCP lets you register tools from many sources, search them, call them synchronously or as streams, and compose them reliably from any runtime that implements the spec.
 
+See the official [UTCP specification](https://github.com/universal-tool-calling-protocol/utcp-specification) for full details. 
 
 ### Features
 - Core models and client with async APIs and CancellationToken
