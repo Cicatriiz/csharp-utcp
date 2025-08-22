@@ -1,4 +1,4 @@
-## UTCP for .NET
+## Universal Tool Calling Protocol (UTCP) 1.0.1 for .NET
 
 Idiomatic .NET SDK for the Universal Tool Calling Protocol (UTCP), mirroring the Python reference implementation.
 
