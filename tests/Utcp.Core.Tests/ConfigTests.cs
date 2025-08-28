@@ -34,3 +34,49 @@ public class ConfigTests
     }
 }
 
+public class VariableLoaderTests
+{
+    [Fact]
+    public void ResolutionOrder_Config_Loaders_Env()
+    {
+        var tempDir = Directory.CreateTempSubdirectory();
+        try
+        {
+            var dotenvPath = Path.Combine(tempDir.FullName, ".env");
+            File.WriteAllText(dotenvPath, "FOO=from_loader\nBAR=from_loader\n");
+            Environment.SetEnvironmentVariable("FOO", "from_env");
+            Environment.SetEnvironmentVariable("BAZ", "from_env");
+
+            var cfg = new UtcpClientConfig
+            {
+                Variables = new Dictionary<string, string>
+                {
+                    { "FOO", "from_config" },
+                },
+                LoadVariablesFrom = new [] { (IVariableLoader)new Utcp.Core.Substitution.DotEnvVariableLoader(tempDir.FullName) },
+                ToolRepository = null!,
+                ToolSearchStrategy = null!,
+            };
+
+            var substitutor = new DefaultVariableSubstitutor();
+            var input = new Dictionary<string, object?>
+            {
+                { "a", "${FOO}" }, // config wins
+                { "b", "${BAR}" }, // loader wins
+                { "c", "${BAZ}" }, // env wins
+            };
+            var result = (Dictionary<string, object?>)substitutor.Substitute(input, cfg)!;
+
+            result["a"].Should().Be("from_config");
+            result["b"].Should().Be("from_loader");
+            result["c"].Should().Be("from_env");
+            Assert.Throws<Utcp.Core.Interfaces.UtcpVariableNotFound>(() => substitutor.Substitute("${REALLY_MISSING}", cfg));
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("FOO", null);
+            Environment.SetEnvironmentVariable("BAZ", null);
+        }
+    }
+}
+

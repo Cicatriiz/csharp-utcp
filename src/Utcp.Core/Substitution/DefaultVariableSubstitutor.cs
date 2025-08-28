@@ -65,13 +65,25 @@ public sealed class DefaultVariableSubstitutor : IVariableSubstitutor
                 return value;
             }
 
+            if (config.LoadVariablesFrom is not null)
+            {
+                foreach (var loader in config.LoadVariablesFrom)
+                {
+                    var loaded = loader.Get(namespaced);
+                    if (!string.IsNullOrEmpty(loaded))
+                    {
+                        return loaded!;
+                    }
+                }
+            }
+
             var env = Environment.GetEnvironmentVariable(namespaced);
             if (!string.IsNullOrEmpty(env))
             {
                 return env!;
             }
 
-            return match.Value;
+            throw new Utcp.Core.Interfaces.UtcpVariableNotFound(namespaced);
         });
     }
 

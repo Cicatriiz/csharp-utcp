@@ -38,6 +38,57 @@ public class HttpCommunicationProtocolTests
         result.Success.Should().BeTrue();
         result.Manual.Tools.Should().ContainSingle(t => t.Name == "manual.getStatus");
     }
+
+    [Fact]
+    public async Task CallTool_HttpUrl_MustBeHttpsOrLocalhost()
+    {
+        var mock = new MockHttpMessageHandler();
+        var httpClientFactory = new MockFactory(mock);
+        var protocol = new HttpCommunicationProtocol(httpClientFactory);
+
+        var template = new HttpCallTemplate
+        {
+            CallTemplateType = "http",
+            Name = "manual",
+            Url = new Uri("http://api.example.com/"),
+        };
+
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>
+        {
+            _ = await protocol.CallToolAsync(new DummyClient(), "manual.tool", new Dictionary<string, object?>(), template);
+        });
+    }
+
+    [Fact]
+    public async Task OAuth2_Token_IsCached()
+    {
+        var tokenRequests = 0;
+        var mock = new MockHttpMessageHandler();
+        mock.When(HttpMethod.Post, "https://auth.example.com/token").Respond(_ =>
+        {
+            tokenRequests++;
+            return new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent("{\"access_token\":\"t\"}")
+            };
+        });
+        mock.When(HttpMethod.Get, "https://api.example.com/data").Respond("application/json", "{}");
+
+        var httpClientFactory = new MockFactory(mock);
+        var protocol = new HttpCommunicationProtocol(httpClientFactory);
+
+        var template = new HttpCallTemplate
+        {
+            CallTemplateType = "http",
+            Name = "manual",
+            Url = new Uri("https://api.example.com/data"),
+            Auth = new OAuth2Auth { AuthType = "oauth2", TokenUrl = "https://auth.example.com/token", ClientId = "id", ClientSecret = "secret" }
+        };
+
+        var _ = await protocol.CallToolAsync(new DummyClient(), "manual.tool", new Dictionary<string, object?>(), template);
+        var __ = await protocol.CallToolAsync(new DummyClient(), "manual.tool", new Dictionary<string, object?>(), template);
+        tokenRequests.Should().Be(1);
+    }
     [Fact]
     public async Task CallTool_BasicGet_ReturnsBody()
     {
@@ -69,6 +120,15 @@ public class HttpCommunicationProtocolTests
     private sealed class DummyClient : UtcpClient
     {
         public DummyClient() : base(new UtcpClientConfig{ ToolRepository = null!, ToolSearchStrategy = null! }, null){}
+
+        public override Task<RegisterManualResult> RegisterManualAsync(CallTemplate manualCallTemplate, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task RegisterManualsAsync(IEnumerable<CallTemplate> manualCallTemplates, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task<bool> DeregisterManualAsync(string manualName, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task<IReadOnlyList<Tool>> SearchToolsAsync(string query, int limit = 10, IReadOnlyList<string>? anyOfTagsRequired = null, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task<object?> CallToolAsync(string toolName, IReadOnlyDictionary<string, object?> toolArgs, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override async IAsyncEnumerable<object?> CallToolStreamingAsync(string toolName, IReadOnlyDictionary<string, object?> toolArgs, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default) { yield break; }
+        public override Task<IReadOnlyList<string>> GetRequiredVariablesForManualAndToolsAsync(CallTemplate manualCallTemplate, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task<IReadOnlyList<string>> GetRequiredVariablesForRegisteredToolAsync(string toolName, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 }
 

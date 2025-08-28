@@ -4,14 +4,19 @@
 namespace Utcp.Http;
 
 using System.Net.Http.Json;
+using System.Collections.Concurrent;
 using Utcp.Core;
 using Utcp.Core.Interfaces;
 using Utcp.Core.Models;
 using Utcp.Http.OpenApi;
+using System.Net.Http.Headers;
+using System.Text;
+using System.Text.Json;
 
 public sealed class HttpCommunicationProtocol : ICommunicationProtocol
 {
     private readonly IHttpClientFactory httpClientFactory;
+    private readonly ConcurrentDictionary<string, string> oauthTokens = new();
 
     public HttpCommunicationProtocol(IHttpClientFactory httpClientFactory)
     {
@@ -23,6 +28,7 @@ public sealed class HttpCommunicationProtocol : ICommunicationProtocol
         // Auto-convert OpenAPI specs into UTCP manuals if the manual template points to an OpenAPI document
         if (manualCallTemplate is HttpCallTemplate http && http.Url is not null)
         {
+            EnforceHttpsOrLocalhost(http.Url);
             var client = this.httpClientFactory.CreateClient("utcp");
             if (http.Timeout is not null)
             {
@@ -36,6 +42,12 @@ public sealed class HttpCommunicationProtocol : ICommunicationProtocol
                 {
                     req.Headers.TryAddWithoutValidation(k, v);
                 }
+            }
+
+            if (http.Auth is OAuth2Auth oauth)
+            {
+                var token = await this.GetOAuth2TokenAsync(oauth, cancellationToken).ConfigureAwait(false);
+                req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
             }
 
             try
@@ -99,6 +111,7 @@ public sealed class HttpCommunicationProtocol : ICommunicationProtocol
             throw new ArgumentException("Expected HttpCallTemplate");
         }
 
+        EnforceHttpsOrLocalhost(http.Url);
         var client = this.httpClientFactory.CreateClient("utcp");
         if (http.Timeout is not null)
         {
@@ -112,6 +125,12 @@ public sealed class HttpCommunicationProtocol : ICommunicationProtocol
             {
                 req.Headers.TryAddWithoutValidation(k, v);
             }
+        }
+
+        if (http.Auth is OAuth2Auth oauth)
+        {
+            var token = await this.GetOAuth2TokenAsync(oauth, cancellationToken).ConfigureAwait(false);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
         if (http.Body is not null)
@@ -135,6 +154,7 @@ public sealed class HttpCommunicationProtocol : ICommunicationProtocol
             yield break;
         }
 
+        EnforceHttpsOrLocalhost(http.Url);
         var client = this.httpClientFactory.CreateClient("utcp");
         if (http.Timeout is not null)
         {
@@ -150,6 +170,11 @@ public sealed class HttpCommunicationProtocol : ICommunicationProtocol
                 req.Headers.TryAddWithoutValidation(k, v);
             }
         }
+        if (http.Auth is OAuth2Auth oauth)
+        {
+            var token = await this.GetOAuth2TokenAsync(oauth, cancellationToken).ConfigureAwait(false);
+            req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+        }
         if (http.Body is not null)
         {
             req.Content = JsonContent.Create(http.Body);
@@ -161,6 +186,86 @@ public sealed class HttpCommunicationProtocol : ICommunicationProtocol
         {
             yield return evt.Data;
         }
+    }
+
+    private static void EnforceHttpsOrLocalhost(Uri url)
+    {
+        if (url.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+        if (url.IsLoopback)
+        {
+            return;
+        }
+        throw new InvalidOperationException("Insecure HTTP is only allowed for localhost");
+    }
+
+    private async Task<string> GetOAuth2TokenAsync(OAuth2Auth auth, CancellationToken cancellationToken)
+    {
+        var clientId = auth.ClientId ?? throw new ArgumentException("OAuth2Auth.ClientId is required");
+        var cacheKey = $"{auth.TokenUrl}|{clientId}";
+        if (this.oauthTokens.TryGetValue(cacheKey, out var cached))
+        {
+            return cached;
+        }
+
+        var scopeValue = auth.Scopes is { Length: > 0 } ? string.Join(' ', auth.Scopes) : string.Empty;
+        // Try credentials in body
+        try
+        {
+            var bodyPairs = new List<KeyValuePair<string, string>>
+            {
+                new("grant_type", "client_credentials"),
+            };
+            if (!string.IsNullOrEmpty(clientId)) bodyPairs.Add(new("client_id", clientId));
+            if (!string.IsNullOrEmpty(auth.ClientSecret)) bodyPairs.Add(new("client_secret", auth.ClientSecret!));
+            if (!string.IsNullOrEmpty(scopeValue)) bodyPairs.Add(new("scope", scopeValue));
+
+            using var body = new FormUrlEncodedContent(bodyPairs);
+            var http = this.httpClientFactory.CreateClient("utcp");
+            using var resp = await http.PostAsync(auth.TokenUrl, body, cancellationToken).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var token = ExtractAccessToken(json);
+            this.oauthTokens[cacheKey] = token;
+            return token;
+        }
+        catch (HttpRequestException)
+        {
+            // fallback to basic auth header method
+        }
+
+        // Fallback: Basic auth header
+        var authHeaderValue = Convert.ToBase64String(Encoding.ASCII.GetBytes($"{clientId}:{auth.ClientSecret}"));
+        using (var req = new HttpRequestMessage(HttpMethod.Post, auth.TokenUrl))
+        {
+            req.Headers.Authorization = new AuthenticationHeaderValue("Basic", authHeaderValue);
+            var pairs = new List<KeyValuePair<string, string>>
+            {
+                new("grant_type", "client_credentials"),
+            };
+            if (!string.IsNullOrEmpty(scopeValue)) pairs.Add(new("scope", scopeValue));
+            req.Content = new FormUrlEncodedContent(pairs);
+            var http = this.httpClientFactory.CreateClient("utcp");
+            using var resp = await http.SendAsync(req, cancellationToken).ConfigureAwait(false);
+            resp.EnsureSuccessStatusCode();
+            var json = await resp.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+            var token = ExtractAccessToken(json);
+            this.oauthTokens[cacheKey] = token;
+            return token;
+        }
+    }
+
+    private static string ExtractAccessToken(string json)
+    {
+        using var doc = JsonDocument.Parse(json);
+        var root = doc.RootElement;
+        if (root.TryGetProperty("access_token", out var tok) && tok.ValueKind == JsonValueKind.String)
+        {
+            return tok.GetString()!;
+        }
+        throw new InvalidOperationException("OAuth2 token response missing access_token");
     }
 }
 

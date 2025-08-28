@@ -46,6 +46,39 @@ public class SearchStrategyTests
         results.First().Name.Should().Be("m.weather.current");
     }
 
+    [Fact]
+    public async Task FiltersByAnyOfTagsRequired()
+    {
+        var repo = new InMemToolRepository();
+        var strategy = new TagAndDescriptionWordMatchStrategy();
+
+        var manual = new UtcpManual
+        {
+            Tools = new List<Tool>
+            {
+                new Tool
+                {
+                    Name = "t1",
+                    Description = "alpha",
+                    Tags = new[]{"x","y"},
+                    ToolCallTemplate = new DummyCallTemplate { CallTemplateType = "dummy", Name = "dummy" },
+                },
+                new Tool
+                {
+                    Name = "t2",
+                    Description = "beta",
+                    Tags = new[]{"z"},
+                    ToolCallTemplate = new DummyCallTemplate { CallTemplateType = "dummy", Name = "dummy" },
+                }
+            }
+        };
+        await repo.SaveManualAsync(new DummyCallTemplate{ CallTemplateType = "dummy", Name = "m" }, manual);
+
+        var results = await strategy.SearchToolsAsync(repo, "", 10, new[]{"z"});
+        results.Should().ContainSingle();
+        results.Single().Name.Should().Be("t2");
+    }
+
     private sealed record DummyCallTemplate : CallTemplate;
 }
 

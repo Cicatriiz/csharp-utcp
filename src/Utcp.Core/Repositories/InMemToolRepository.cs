@@ -91,5 +91,17 @@ public sealed class InMemToolRepository : IConcurrentToolRepository
         var list = (IReadOnlyList<CallTemplate>)this.manualTemplatesByName.Values.ToList();
         return Task.FromResult(list);
     }
+
+    public Task<UtcpManual?> TryGetManualByNameAsync(string manualName, CancellationToken cancellationToken = default)
+    {
+        this.manualsByName.TryGetValue(manualName, out var manual);
+        return Task.FromResult(manual);
+    }
+
+    public Task<CallTemplate?> TryGetManualCallTemplateByNameAsync(string manualName, CancellationToken cancellationToken = default)
+    {
+        this.manualTemplatesByName.TryGetValue(manualName, out var template);
+        return Task.FromResult(template);
+    }
 }
 

@@ -33,6 +33,27 @@ public class RepositoryConcurrencyTests
         tools.Should().ContainSingle(t => t.Name == "m.calc.add");
     }
 
+    [Fact]
+    public async Task RemoveManualAlsoRemovesTools()
+    {
+        var repo = new InMemToolRepository();
+        var manual = new UtcpManual
+        {
+            Tools = new List<Tool>
+            {
+                new Tool { Name = "tool.a", ToolCallTemplate = new DummyCallTemplate { CallTemplateType = "dummy", Name = "m" } },
+                new Tool { Name = "tool.b", ToolCallTemplate = new DummyCallTemplate { CallTemplateType = "dummy", Name = "m" } },
+            }
+        };
+
+        await repo.SaveManualAsync(new DummyCallTemplate{ CallTemplateType = "dummy", Name = "m" }, manual);
+        (await repo.GetToolsAsync()).Should().HaveCount(2);
+
+        var removed = await repo.RemoveManualAsync("m");
+        removed.Should().BeTrue();
+        (await repo.GetToolsAsync()).Should().BeEmpty();
+    }
+
     private sealed record DummyCallTemplate : CallTemplate;
 }
 

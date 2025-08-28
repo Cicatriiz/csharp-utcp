@@ -15,13 +15,13 @@ public sealed class CallTemplateJsonConverter : JsonConverter<CallTemplate>
         using var doc = JsonDocument.ParseValue(ref reader);
         if (!doc.RootElement.TryGetProperty("call_template_type", out var typeProp))
         {
-            throw new JsonException("Missing call_template_type discriminator");
+            throw new Interfaces.UtcpSerializerValidationError("Missing call_template_type discriminator");
         }
 
         var discriminator = typeProp.GetString() ?? string.Empty;
         if (!PolymorphicRegistry.TryGetCallTemplateType(discriminator, out var type))
         {
-            throw new JsonException($"Unknown CallTemplate type: {discriminator}");
+            throw new Interfaces.UtcpSerializerValidationError($"Unknown CallTemplate type: {discriminator}");
         }
 
         var json = doc.RootElement.GetRawText();
@@ -41,13 +41,13 @@ public sealed class AuthJsonConverter : JsonConverter<Auth>
         using var doc = JsonDocument.ParseValue(ref reader);
         if (!doc.RootElement.TryGetProperty("auth_type", out var typeProp))
         {
-            throw new JsonException("Missing auth_type discriminator");
+            throw new Interfaces.UtcpSerializerValidationError("Missing auth_type discriminator");
         }
 
         var discriminator = typeProp.GetString() ?? string.Empty;
         if (!PolymorphicRegistry.TryGetAuthType(discriminator, out var type))
         {
-            throw new JsonException($"Unknown Auth type: {discriminator}");
+            throw new Interfaces.UtcpSerializerValidationError($"Unknown Auth type: {discriminator}");
         }
 
         var json = doc.RootElement.GetRawText();

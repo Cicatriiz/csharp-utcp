@@ -147,6 +147,15 @@ public class McpCommunicationProtocolTests
     private sealed class DummyClient : UtcpClient
     {
         public DummyClient() : base(new UtcpClientConfig{ ToolRepository = null!, ToolSearchStrategy = null! }, null){}
+
+        public override Task<RegisterManualResult> RegisterManualAsync(CallTemplate manualCallTemplate, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task RegisterManualsAsync(IEnumerable<CallTemplate> manualCallTemplates, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task<bool> DeregisterManualAsync(string manualName, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task<IReadOnlyList<Tool>> SearchToolsAsync(string query, int limit = 10, IReadOnlyList<string>? anyOfTagsRequired = null, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task<object?> CallToolAsync(string toolName, IReadOnlyDictionary<string, object?> toolArgs, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override async IAsyncEnumerable<object?> CallToolStreamingAsync(string toolName, IReadOnlyDictionary<string, object?> toolArgs, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default) { yield break; }
+        public override Task<IReadOnlyList<string>> GetRequiredVariablesForManualAndToolsAsync(CallTemplate manualCallTemplate, CancellationToken cancellationToken = default) => throw new NotImplementedException();
+        public override Task<IReadOnlyList<string>> GetRequiredVariablesForRegisteredToolAsync(string toolName, CancellationToken cancellationToken = default) => throw new NotImplementedException();
     }
 
     private sealed class FakeHandler : HttpMessageHandler

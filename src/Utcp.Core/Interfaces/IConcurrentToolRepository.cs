@@ -13,5 +13,9 @@ public interface IConcurrentToolRepository
     Task<IReadOnlyList<UtcpManual>> GetManualsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<Tool>> GetToolsAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<CallTemplate>> GetManualCallTemplatesAsync(CancellationToken cancellationToken = default);
+
+    Task<UtcpManual?> TryGetManualByNameAsync(string manualName, CancellationToken cancellationToken = default);
+
+    Task<CallTemplate?> TryGetManualCallTemplateByNameAsync(string manualName, CancellationToken cancellationToken = default);
 }
 

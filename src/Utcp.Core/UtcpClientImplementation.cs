@@ -26,6 +26,7 @@ public sealed class UtcpClientImplementation : UtcpClient
 
     public static async Task<UtcpClient> CreateAsync(string? rootDir = null, object? config = null)
     {
+        Utcp.Core.Serialization.PluginLoader.EnsurePluginsInitialized();
         var loadedConfig = await LoadConfigAsync(config).ConfigureAwait(false);
         var client = new UtcpClientImplementation(loadedConfig, new DefaultVariableSubstitutor(), new InMemToolRepository(), new TagAndDescriptionWordMatchStrategy(), rootDir);
 
@@ -51,7 +52,7 @@ public sealed class UtcpClientImplementation : UtcpClient
         return client;
     }
 
-    public async Task<RegisterManualResult> RegisterManualAsync(CallTemplate manualCallTemplate, CancellationToken cancellationToken = default)
+    public override async Task<RegisterManualResult> RegisterManualAsync(CallTemplate manualCallTemplate, CancellationToken cancellationToken = default)
     {
         if (!Core.Protocols.ProtocolRegistry.TryGet(manualCallTemplate.CallTemplateType, out var protocol) || protocol is null)
         {
@@ -63,7 +64,7 @@ public sealed class UtcpClientImplementation : UtcpClient
         return result;
     }
 
-    public async Task RegisterManualsAsync(IEnumerable<CallTemplate> manualCallTemplates, CancellationToken cancellationToken = default)
+    public override async Task RegisterManualsAsync(IEnumerable<CallTemplate> manualCallTemplates, CancellationToken cancellationToken = default)
     {
         foreach (var t in manualCallTemplates)
         {
@@ -71,12 +72,23 @@ public sealed class UtcpClientImplementation : UtcpClient
         }
     }
 
-    public Task<IReadOnlyList<Tool>> SearchToolsAsync(string query, int limit = 10, IReadOnlyList<string>? anyOfTagsRequired = null, CancellationToken cancellationToken = default)
+    public override async Task<bool> DeregisterManualAsync(string manualName, CancellationToken cancellationToken = default)
+    {
+        var template = await this.repository.TryGetManualCallTemplateByNameAsync(manualName, cancellationToken).ConfigureAwait(false);
+        if (template is not null && Core.Protocols.ProtocolRegistry.TryGet(template.CallTemplateType, out var protocol) && protocol is not null)
+        {
+            await protocol.DeregisterManualAsync(this, template, cancellationToken).ConfigureAwait(false);
+        }
+
+        return await this.repository.RemoveManualAsync(manualName, cancellationToken).ConfigureAwait(false);
+    }
+
+    public override Task<IReadOnlyList<Tool>> SearchToolsAsync(string query, int limit = 10, IReadOnlyList<string>? anyOfTagsRequired = null, CancellationToken cancellationToken = default)
     {
         return this.searchStrategy.SearchToolsAsync(this.repository, query, limit, anyOfTagsRequired, cancellationToken);
     }
 
-    public async Task<object?> CallToolAsync(string toolName, IReadOnlyDictionary<string, object?> toolArgs, CancellationToken cancellationToken = default)
+    public override async Task<object?> CallToolAsync(string toolName, IReadOnlyDictionary<string, object?> toolArgs, CancellationToken cancellationToken = default)
     {
         var tools = await this.repository.GetToolsAsync(cancellationToken).ConfigureAwait(false);
         var tool = tools.FirstOrDefault(t => string.Equals(t.Name, toolName, StringComparison.OrdinalIgnoreCase));
@@ -101,7 +113,7 @@ public sealed class UtcpClientImplementation : UtcpClient
         return result;
     }
 
-    public async IAsyncEnumerable<object?> CallToolStreamingAsync(string toolName, IReadOnlyDictionary<string, object?> toolArgs, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public override async IAsyncEnumerable<object?> CallToolStreamingAsync(string toolName, IReadOnlyDictionary<string, object?> toolArgs, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         var tools = await this.repository.GetToolsAsync(cancellationToken).ConfigureAwait(false);
         var tool = tools.FirstOrDefault(t => string.Equals(t.Name, toolName, StringComparison.OrdinalIgnoreCase));
@@ -120,6 +132,65 @@ public sealed class UtcpClientImplementation : UtcpClient
         {
             yield return chunk; // Post-processing for streaming can be added later per requirements
         }
+    }
+
+    public override async Task<IReadOnlyList<string>> GetRequiredVariablesForManualAndToolsAsync(CallTemplate manualCallTemplate, CancellationToken cancellationToken = default)
+    {
+        var required = new HashSet<string>();
+        foreach (var v in this.substitutor.FindRequiredVariables(manualCallTemplate, manualCallTemplate.Name))
+        {
+            required.Add(v);
+        }
+
+        var tools = await this.repository.GetToolsAsync(cancellationToken).ConfigureAwait(false);
+        foreach (var tool in tools.Where(t => string.Equals(t.ToolCallTemplate.Name, manualCallTemplate.Name, StringComparison.OrdinalIgnoreCase)))
+        {
+            foreach (var v in this.substitutor.FindRequiredVariables(tool.ToolCallTemplate, tool.ToolCallTemplate.Name))
+            {
+                required.Add(v);
+            }
+            if (tool.ToolCallTemplate.Auth is not null)
+            {
+                foreach (var v in this.substitutor.FindRequiredVariables(tool.ToolCallTemplate.Auth, tool.ToolCallTemplate.Name))
+                {
+                    required.Add(v);
+                }
+            }
+        }
+
+        if (manualCallTemplate.Auth is not null)
+        {
+            foreach (var v in this.substitutor.FindRequiredVariables(manualCallTemplate.Auth, manualCallTemplate.Name))
+            {
+                required.Add(v);
+            }
+        }
+
+        return required.ToList();
+    }
+
+    public override async Task<IReadOnlyList<string>> GetRequiredVariablesForRegisteredToolAsync(string toolName, CancellationToken cancellationToken = default)
+    {
+        var tools = await this.repository.GetToolsAsync(cancellationToken).ConfigureAwait(false);
+        var tool = tools.FirstOrDefault(t => string.Equals(t.Name, toolName, StringComparison.OrdinalIgnoreCase));
+        if (tool is null)
+        {
+            return Array.Empty<string>();
+        }
+
+        var required = new HashSet<string>();
+        foreach (var v in this.substitutor.FindRequiredVariables(tool.ToolCallTemplate, tool.ToolCallTemplate.Name))
+        {
+            required.Add(v);
+        }
+        if (tool.ToolCallTemplate.Auth is not null)
+        {
+            foreach (var v in this.substitutor.FindRequiredVariables(tool.ToolCallTemplate.Auth, tool.ToolCallTemplate.Name))
+            {
+                required.Add(v);
+            }
+        }
+        return required.ToList();
     }
 
     private static async Task<UtcpClientConfig> LoadConfigAsync(object? config)
