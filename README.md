@@ -125,7 +125,29 @@ var substituted = substitutor.Substitute(
 ```
 
 ### OpenAPI conversion
-End-to-end conversion using `OpenApiToUtcpConverter`:
+You can register an OpenAPI spec by passing its URL as an `HttpCallTemplate` to `RegisterManualAsync`. The HTTP protocol automatically fetches and converts JSON OpenAPI documents into a UTCP manual at registration time.
+
+Example (automatic conversion on register):
+```csharp
+using Utcp.Http;
+
+var client = await UtcpClientImplementation.CreateAsync(config: new UtcpClientConfig
+{
+    ToolRepository = new Utcp.Core.Repositories.InMemToolRepository(),
+    ToolSearchStrategy = new Utcp.Core.Search.TagAndDescriptionWordMatchStrategy(),
+});
+
+await client.RegisterManualAsync(new HttpCallTemplate
+{
+    CallTemplateType = "http",
+    Name = "petstore",
+    Url = new Uri("https://raw.githubusercontent.com/OAI/OpenAPI-Specification/main/examples/v3.0/petstore.json"),
+});
+
+var tools = await client.SearchToolsAsync("pet store", 5);
+```
+
+End-to-end conversion using `OpenApiToUtcpConverter` (manual control):
 ```csharp
 using Utcp.Http.OpenApi;
 using System.Net.Http;
