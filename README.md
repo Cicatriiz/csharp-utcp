@@ -101,13 +101,27 @@ await foreach (var chunk in client.CallToolStreamingAsync("echo", new Dictionary
 ```
 
 ### Variable substitution
-Namespaced variables follow the pattern `manual__{name}_VAR`. You can pass variables directly or rely on environment variables.
+Namespaced variables are computed by:
+- Take the namespace and replace every `_` with `__` (double underscores)
+- Append `_` and the variable key
+
+In other words: `{namespace with underscores doubled}_{KEY}`.
+
+Examples:
+- `variableNamespace = "manual_openlibrary"`, `key = "API_KEY"` → `manual__openlibrary_API_KEY`
+- `variableNamespace = "ns_with_many_parts"`, `key = "TOKEN"` → `ns__with__many__parts_TOKEN`
+
+Variables are resolved first from `UtcpClientConfig.Variables` using the namespaced key, then from environment variables using the same namespaced key. Both `$VAR` and `${VAR}` forms in strings are supported.
 ```csharp
 using Utcp.Core.Substitution;
 
 var substitutor = new DefaultVariableSubstitutor();
 var cfg = new UtcpClientConfig { ToolRepository = repo, ToolSearchStrategy = search, Variables = new(){ ["manual__openlibrary_API_KEY"] = "123" } };
-var substituted = substitutor.Substitute(new Dictionary<string, object?> { ["auth"] = new Dictionary<string, object?>{ ["token"] = "${API_KEY}" } }, cfg, "manual_openlibrary");
+var substituted = substitutor.Substitute(
+    new Dictionary<string, object?> { ["auth"] = new Dictionary<string, object?>{ ["token"] = "${API_KEY}" } },
+    cfg,
+    "manual_openlibrary"
+);
 ```
 
 ### OpenAPI conversion
