@@ -8,6 +8,11 @@ using Utcp.Core.Serialization;
 
 public sealed record McpCallTemplate : CallTemplate
 {
+    static McpCallTemplate()
+    {
+        PolymorphicRegistry.RegisterCallTemplateDerivedType("mcp", typeof(McpCallTemplate));
+    }
+
     public string Transport { get; init; } = "stdio"; // or "http"
     public string? Command { get; init; }
     public string? Url { get; init; }
@@ -17,7 +22,6 @@ public sealed record McpCallTemplate : CallTemplate
     public McpCallTemplate()
     {
         CallTemplateType = "mcp";
-        PolymorphicRegistry.RegisterCallTemplateDerivedType("mcp", typeof(McpCallTemplate));
     }
 }
 

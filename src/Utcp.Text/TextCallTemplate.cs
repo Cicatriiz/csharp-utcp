@@ -8,6 +8,11 @@ using Utcp.Core.Serialization;
 
 public sealed record TextCallTemplate : CallTemplate
 {
+    static TextCallTemplate()
+    {
+        PolymorphicRegistry.RegisterCallTemplateDerivedType("text", typeof(TextCallTemplate));
+    }
+
     public required string FilePath { get; init; }
     public string? EncodingName { get; init; }
     public int ChunkSizeBytes { get; init; } = 0;
@@ -16,7 +21,6 @@ public sealed record TextCallTemplate : CallTemplate
     public TextCallTemplate()
     {
         CallTemplateType = "text";
-        PolymorphicRegistry.RegisterCallTemplateDerivedType("text", typeof(TextCallTemplate));
     }
 }
 

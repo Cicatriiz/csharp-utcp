@@ -8,13 +8,17 @@ using Utcp.Core.Serialization;
 
 public sealed record UdpCallTemplate : CallTemplate
 {
+    static UdpCallTemplate()
+    {
+        PolymorphicRegistry.RegisterCallTemplateDerivedType("udp", typeof(UdpCallTemplate));
+    }
+
     public required string Host { get; init; }
     public int Port { get; init; }
 
     public UdpCallTemplate()
     {
         CallTemplateType = "udp";
-        PolymorphicRegistry.RegisterCallTemplateDerivedType("udp", typeof(UdpCallTemplate));
     }
 }
 

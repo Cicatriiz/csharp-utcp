@@ -68,10 +68,48 @@ public sealed class InMemToolRepository : IConcurrentToolRepository
         }
     }
 
+    public async Task<bool> RemoveToolAsync(string toolName, CancellationToken cancellationToken = default)
+    {
+        await this.writeLock.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            if (!this.toolsByName.TryRemove(toolName, out _))
+            {
+                return false;
+            }
+
+            foreach (var manualName in this.manualsByName.Keys.ToList())
+            {
+                if (!this.manualsByName.TryGetValue(manualName, out var manual))
+                {
+                    continue;
+                }
+
+                var remaining = manual.Tools.Where(t => !string.Equals(t.Name, toolName, StringComparison.OrdinalIgnoreCase)).ToList();
+                if (remaining.Count != manual.Tools.Count)
+                {
+                    this.manualsByName[manualName] = manual with { Tools = remaining };
+                }
+            }
+
+            return true;
+        }
+        finally
+        {
+            this.writeLock.Release();
+        }
+    }
+
     public Task<IReadOnlyList<string>> GetManualNamesAsync(CancellationToken cancellationToken = default)
     {
         var list = (IReadOnlyList<string>)this.manualsByName.Keys.ToList();
         return Task.FromResult(list);
+    }
+
+    public Task<CallTemplate?> GetManualCallTemplateAsync(string manualCallTemplateName, CancellationToken cancellationToken = default)
+    {
+        this.manualTemplatesByName.TryGetValue(manualCallTemplateName, out var template);
+        return Task.FromResult(template);
     }
 
     public Task<IReadOnlyList<UtcpManual>> GetManualsAsync(CancellationToken cancellationToken = default)
@@ -80,10 +118,32 @@ public sealed class InMemToolRepository : IConcurrentToolRepository
         return Task.FromResult(list);
     }
 
+    public Task<UtcpManual?> GetManualAsync(string manualName, CancellationToken cancellationToken = default)
+    {
+        this.manualsByName.TryGetValue(manualName, out var manual);
+        return Task.FromResult(manual);
+    }
+
     public Task<IReadOnlyList<Tool>> GetToolsAsync(CancellationToken cancellationToken = default)
     {
         var list = (IReadOnlyList<Tool>)this.toolsByName.Values.ToList();
         return Task.FromResult(list);
+    }
+
+    public Task<Tool?> GetToolAsync(string toolName, CancellationToken cancellationToken = default)
+    {
+        this.toolsByName.TryGetValue(toolName, out var tool);
+        return Task.FromResult(tool);
+    }
+
+    public Task<IReadOnlyList<Tool>?> GetToolsByManualAsync(string manualName, CancellationToken cancellationToken = default)
+    {
+        if (this.manualsByName.TryGetValue(manualName, out var manual))
+        {
+            return Task.FromResult<IReadOnlyList<Tool>?>(manual.Tools.ToList());
+        }
+
+        return Task.FromResult<IReadOnlyList<Tool>?>(null);
     }
 
     public Task<IReadOnlyList<CallTemplate>> GetManualCallTemplatesAsync(CancellationToken cancellationToken = default)

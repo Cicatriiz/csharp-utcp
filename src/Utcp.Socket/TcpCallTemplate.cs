@@ -8,13 +8,17 @@ using Utcp.Core.Serialization;
 
 public sealed record TcpCallTemplate : CallTemplate
 {
+    static TcpCallTemplate()
+    {
+        PolymorphicRegistry.RegisterCallTemplateDerivedType("tcp", typeof(TcpCallTemplate));
+    }
+
     public required string Host { get; init; }
     public int Port { get; init; }
 
     public TcpCallTemplate()
     {
         CallTemplateType = "tcp";
-        PolymorphicRegistry.RegisterCallTemplateDerivedType("tcp", typeof(TcpCallTemplate));
     }
 }
 

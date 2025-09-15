@@ -16,7 +16,9 @@ public sealed record Tool
 
 public sealed record JsonSchema
 {
+    [JsonPropertyName("$schema")]
     public string? Schema { get; init; }
+    [JsonPropertyName("$id")]
     public string? Id { get; init; }
     public string? Title { get; init; }
     public string? Description { get; init; }
@@ -28,11 +30,14 @@ public sealed record JsonSchema
     public object? Const { get; init; }
     public object? Default { get; init; }
     public string? Format { get; init; }
+    [JsonPropertyName("additionalProperties")]
     public object? AdditionalProperties { get; init; }
     public string? Pattern { get; init; }
     public double? Minimum { get; init; }
     public double? Maximum { get; init; }
+    [JsonPropertyName("minLength")]
     public int? MinLength { get; init; }
+    [JsonPropertyName("maxLength")]
     public int? MaxLength { get; init; }
 }
 

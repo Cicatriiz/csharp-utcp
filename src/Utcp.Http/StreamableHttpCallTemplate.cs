@@ -8,6 +8,11 @@ using Utcp.Core.Serialization;
 
 public sealed record StreamableHttpCallTemplate : CallTemplate
 {
+    static StreamableHttpCallTemplate()
+    {
+        PolymorphicRegistry.RegisterCallTemplateDerivedType("streamable_http", typeof(StreamableHttpCallTemplate));
+    }
+
     public string Method { get; init; } = "GET";
     public required Uri Url { get; init; }
     public IReadOnlyDictionary<string, string>? Headers { get; init; }
@@ -18,7 +23,6 @@ public sealed record StreamableHttpCallTemplate : CallTemplate
     public StreamableHttpCallTemplate()
     {
         CallTemplateType = "streamable_http";
-        PolymorphicRegistry.RegisterCallTemplateDerivedType("streamable_http", typeof(StreamableHttpCallTemplate));
     }
 }
 
