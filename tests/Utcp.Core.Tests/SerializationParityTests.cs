@@ -1,6 +1,7 @@
 // This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 // If a copy of the MPL was not distributed with this file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+using System.Text.Json;
 using FluentAssertions;
 using Utcp.Core.Models;
 using Utcp.Core.Models.Serialization;
@@ -35,6 +36,7 @@ public sealed class SerializationParityTests
         var serializer = new CallTemplateSerializer();
         var template = new HttpCallTemplate
         {
+            CallTemplateType = "http",
             Name = "manual",
             Method = "POST",
             Url = new Uri("https://api.example.com/tool"),
@@ -70,7 +72,16 @@ public sealed class SerializationParityTests
         dict.Should().ContainKey("additionalProperties").WhoseValue.Should().Be(false);
 
         var roundTrip = serializer.ValidateDictionary(dict);
-        roundTrip.Should().BeEquivalentTo(schema);
+        roundTrip.Should().BeEquivalentTo(schema, options => options.Excluding(s => s.AdditionalProperties));
+
+        roundTrip.AdditionalProperties.Should().NotBeNull();
+        var additionalProperties = roundTrip.AdditionalProperties switch
+        {
+            bool b => b,
+            JsonElement element when element.ValueKind is JsonValueKind.True or JsonValueKind.False => element.GetBoolean(),
+            _ => throw new InvalidOperationException("Unexpected AdditionalProperties type."),
+        };
+        additionalProperties.Should().Be(false);
     }
 
     [Fact]
@@ -78,6 +89,7 @@ public sealed class SerializationParityTests
     {
         var callTemplate = new HttpCallTemplate
         {
+            CallTemplateType = "http",
             Name = "manual",
             Method = "GET",
             Url = new Uri("https://api.example.com/tool"),
@@ -108,6 +120,7 @@ public sealed class SerializationParityTests
     {
         var callTemplate = new HttpCallTemplate
         {
+            CallTemplateType = "http",
             Name = "manual",
             Url = new Uri("https://api.example.com/tool"),
         };

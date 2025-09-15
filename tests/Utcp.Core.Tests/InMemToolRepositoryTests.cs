@@ -14,6 +14,7 @@ public sealed class InMemToolRepositoryTests
         var repository = new InMemToolRepository();
         var manualTemplate = new HttpCallTemplate
         {
+            CallTemplateType = "http",
             Name = "manual",
             Url = new Uri("https://api.example.com/utcp"),
         };
@@ -48,6 +49,7 @@ public sealed class InMemToolRepositoryTests
         var repository = new InMemToolRepository();
         var manualTemplate = new HttpCallTemplate
         {
+            CallTemplateType = "http",
             Name = "manual",
             Url = new Uri("https://api.example.com/utcp"),
         };
