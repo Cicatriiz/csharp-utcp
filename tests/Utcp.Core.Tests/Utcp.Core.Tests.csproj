@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="../../src/Utcp.Core/Utcp.Core.csproj" />
+    <ProjectReference Include="../../src/Utcp.Http/Utcp.Http.csproj" />
   </ItemGroup>
 
 </Project>

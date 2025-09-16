@@ -9,6 +9,11 @@ using Utcp.Core.Serialization;
 
 public sealed record HttpCallTemplate : CallTemplate
 {
+    static HttpCallTemplate()
+    {
+        PolymorphicRegistry.RegisterCallTemplateDerivedType("http", typeof(HttpCallTemplate));
+    }
+
     public string Method { get; init; } = "GET";
     public required Uri Url { get; init; }
     public IReadOnlyDictionary<string, string>? Headers { get; init; }
@@ -18,7 +23,6 @@ public sealed record HttpCallTemplate : CallTemplate
     public HttpCallTemplate()
     {
         CallTemplateType = "http";
-        PolymorphicRegistry.RegisterCallTemplateDerivedType("http", typeof(HttpCallTemplate));
     }
 }
 

@@ -8,13 +8,17 @@ using Utcp.Core.Serialization;
 
 public sealed record GraphQlCallTemplate : CallTemplate
 {
+    static GraphQlCallTemplate()
+    {
+        PolymorphicRegistry.RegisterCallTemplateDerivedType("gql", typeof(GraphQlCallTemplate));
+    }
+
     public required Uri Endpoint { get; init; }
     public string? Query { get; init; }
 
     public GraphQlCallTemplate()
     {
         CallTemplateType = "gql";
-        PolymorphicRegistry.RegisterCallTemplateDerivedType("gql", typeof(GraphQlCallTemplate));
     }
 }
 

@@ -8,6 +8,11 @@ using Utcp.Core.Serialization;
 
 public sealed record CliCallTemplate : CallTemplate
 {
+    static CliCallTemplate()
+    {
+        PolymorphicRegistry.RegisterCallTemplateDerivedType("cli", typeof(CliCallTemplate));
+    }
+
     public required string Command { get; init; }
     public IReadOnlyList<string>? Args { get; init; }
     public string? WorkingDirectory { get; init; }
@@ -17,7 +22,6 @@ public sealed record CliCallTemplate : CallTemplate
     public CliCallTemplate()
     {
         CallTemplateType = "cli";
-        PolymorphicRegistry.RegisterCallTemplateDerivedType("cli", typeof(CliCallTemplate));
     }
 }
 
